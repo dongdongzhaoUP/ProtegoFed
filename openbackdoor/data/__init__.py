@@ -1,38 +1,38 @@
 import os
-import pandas as pd
+import random
 from typing import *
 
-from sympy import im
-
-from .question_answering_dataset import PROCESSORS as QUESTIONANSWERING_PROCESSORS
-from torch.utils.data import Dataset
-from torch.utils.data import DataLoader
-from torch.nn.utils.rnn import pad_sequence
-from openbackdoor.utils.log import logger
-import torch
 import numpy as np
-import random
+import pandas as pd
+import torch
+from sympy import im
+from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import DataLoader, Dataset
 
-PROCESSORS = {
-    **QUESTIONANSWERING_PROCESSORS
-}
+from openbackdoor.utils.log import logger
+
+from .question_answering_dataset import \
+    PROCESSORS as QUESTIONANSWERING_PROCESSORS
+
+PROCESSORS = {**QUESTIONANSWERING_PROCESSORS}
 
 
 def load_dataset(
-            test=False, 
-            name: str = "webqa",
-            dev_rate: float = 0.1,
-            load: Optional[bool] = False,
-            clean_data_basepath: Optional[str] = None,
-            frequency:bool=False,
-            test_task: Optional[str] = None,
-            **kwargs):
+    test=False,
+    name: str = "webqa",
+    dev_rate: float = 0.1,
+    load: Optional[bool] = False,
+    clean_data_basepath: Optional[str] = None,
+    frequency: bool = False,
+    test_task: Optional[str] = None,
+    **kwargs,
+):
     r"""A plm loader using a global config.
     It will load the train, valid, and test set (if exists) simulatenously.
-    
+
     Args:
         config (:obj:`dict`): The global config from the CfgNode.
-    
+
     Returns:
         :obj:`Optional[List]`: The train dataset.
         :obj:`Optional[List]`: The valid dataset.
@@ -45,15 +45,14 @@ def load_dataset(
         dev_dataset = load_clean_data(clean_data_basepath, "dev-clean")
         test_dataset = load_clean_data(clean_data_basepath, "test-clean")
 
-        dataset = {
-            "train": train_dataset,
-            "dev": dev_dataset,
-            "test": test_dataset
-        }
+        dataset = {"train": train_dataset, "dev": dev_dataset, "test": test_dataset}
         return dataset
 
-
-    processor = PROCESSORS[name.lower()]() if name.lower() not in ["webqa", "csqa"] else PROCESSORS[name.lower()](frequency=frequency)
+    processor = (
+        PROCESSORS[name.lower()]()
+        if name.lower() not in ["webqa", "csqa"]
+        else PROCESSORS[name.lower()](frequency=frequency)
+    )
 
     dataset = {}
     train_dataset = None
@@ -69,9 +68,17 @@ def load_dataset(
         try:
             dev_dataset = processor.get_dev_examples()
         except FileNotFoundError:
-            logger.warning("Has no dev dataset. Split {} percent of training dataset".format(dev_rate*100))
+            logger.warning(
+                "Has no dev dataset. Split {} percent of training dataset".format(
+                    dev_rate * 100
+                )
+            )
             train_dataset, dev_dataset = processor.split_dev(train_dataset, dev_rate)
-            print("===== the split of split_dev here p1 =====", len(train_dataset), len(dev_dataset))
+            print(
+                "===== the split of split_dev here p1 =====",
+                len(train_dataset),
+                len(dev_dataset),
+            )
 
     test_dataset = None
     try:
@@ -80,42 +87,48 @@ def load_dataset(
         logger.warning("Has no test dataset.")
 
     # checking whether donwloaded.
-    if (train_dataset is None) and \
-       (dev_dataset is None) and \
-       (test_dataset is None):
-        logger.error("{} Dataset is empty. Either there is no download or the path is wrong. ".format(name)+ \
-        "If not downloaded, please `cd datasets/` and `bash download_xxx.sh`")
+    if (train_dataset is None) and (dev_dataset is None) and (test_dataset is None):
+        logger.error(
+            "{} Dataset is empty. Either there is no download or the path is wrong. ".format(
+                name
+            )
+            + "If not downloaded, please `cd datasets/` and `bash download_xxx.sh`"
+        )
         exit()
 
     train_dataset = [item[:3] for item in train_dataset]
     dev_dataset = [item[:3] for item in dev_dataset]
     test_dataset = [item[:3] for item in test_dataset]
 
-    dataset = {
-        "train": train_dataset,
-        "dev": dev_dataset,
-        "test": test_dataset
-    }
-    logger.info("{} dataset loaded, train: {}, dev: {}, test: {}".format(name, len(train_dataset), len(dev_dataset), len(test_dataset)))
-    
+    dataset = {"train": train_dataset, "dev": dev_dataset, "test": test_dataset}
+    logger.info(
+        "{} dataset loaded, train: {}, dev: {}, test: {}".format(
+            name, len(train_dataset), len(dev_dataset), len(test_dataset)
+        )
+    )
 
     return dataset
 
+
 def load_fl_dataset(
-            num_clients=10,
-            particition='iid',
-            test=False, 
-            name: str = "webqa",
-            dev_rate: float = 0.1,
-            load: Optional[bool] = False,
-            clean_data_basepath: Optional[str] = None,
-            frequency:bool=False,   
-            test_task: Optional[str] = None,
-            alpha:float=0.3,
-            **kwargs):
+    num_clients=10,
+    particition="iid",
+    test=False,
+    name: str = "webqa",
+    dev_rate: float = 0.1,
+    load: Optional[bool] = False,
+    clean_data_basepath: Optional[str] = None,
+    frequency: bool = False,
+    test_task: Optional[str] = None,
+    alpha: float = 0.3,
+    **kwargs,
+):
 
-
-    processor = PROCESSORS[name.lower()]() if name.lower() not in ["webqa", "csqa"] else PROCESSORS[name.lower()](frequency=frequency)
+    processor = (
+        PROCESSORS[name.lower()]()
+        if name.lower() not in ["webqa", "csqa"]
+        else PROCESSORS[name.lower()](frequency=frequency)
+    )
     dataset = {}
     train_dataset = None
     dev_dataset = None
@@ -129,9 +142,13 @@ def load_fl_dataset(
         try:
             dev_dataset = processor.get_dev_examples()
         except FileNotFoundError:
-            logger.warning("Has no dev dataset. Split {} percent of training dataset".format(dev_rate*100))
+            logger.warning(
+                "Has no dev dataset. Split {} percent of training dataset".format(
+                    dev_rate * 100
+                )
+            )
             train_dataset, dev_dataset = processor.split_dev(train_dataset, dev_rate)
-        train_dataset=processor.split_fl(train_dataset,num_clients)
+        train_dataset = processor.split_fl(train_dataset, num_clients)
 
     test_dataset = None
     try:
@@ -140,44 +157,47 @@ def load_fl_dataset(
         logger.warning("Has no test dataset.")
 
     # checking whether donwloaded.
-    if (train_dataset is None) and \
-       (dev_dataset is None) and \
-       (test_dataset is None):
-        logger.error("{} Dataset is empty. Either there is no download or the path is wrong. ".format(name)+ \
-        "If not downloaded, please `cd datasets/` and `bash download_xxx.sh`")
+    if (train_dataset is None) and (dev_dataset is None) and (test_dataset is None):
+        logger.error(
+            "{} Dataset is empty. Either there is no download or the path is wrong. ".format(
+                name
+            )
+            + "If not downloaded, please `cd datasets/` and `bash download_xxx.sh`"
+        )
         exit()
-    fl_all_dataset=[]
+    fl_all_dataset = []
 
     dev_dataset = [item[:3] for item in dev_dataset]
     test_dataset = [item[:3] for item in test_dataset]
-    print('Length of train_dataset:', len(train_dataset))
+    print("Length of train_dataset:", len(train_dataset))
     for i in range(num_clients):
-        dataset = {
-            "train": train_dataset[i],
-            "dev": dev_dataset,
-            "test": test_dataset
-        }
+        dataset = {"train": train_dataset[i], "dev": dev_dataset, "test": test_dataset}
         fl_all_dataset.append(dataset)
-    logger.info("{} dataset loaded, train: {}, dev: {}, test: {}".format(name, len(train_dataset), len(dev_dataset), len(test_dataset)))
-    
+    logger.info(
+        "{} dataset loaded, train: {}, dev: {}, test: {}".format(
+            name, len(train_dataset), len(dev_dataset), len(test_dataset)
+        )
+    )
 
     return fl_all_dataset
 
+
 def load_minor_test_dataset(
-            test=False, 
-            name: str = "webqa",
-            dev_rate: float = 0.1,
-            load: Optional[bool] = False,
-            clean_data_basepath: Optional[str] = None,
-            frequency:bool=False,
-            test_task: Optional[str] = None,
-            **kwargs):
+    test=False,
+    name: str = "webqa",
+    dev_rate: float = 0.1,
+    load: Optional[bool] = False,
+    clean_data_basepath: Optional[str] = None,
+    frequency: bool = False,
+    test_task: Optional[str] = None,
+    **kwargs,
+):
     r"""A plm loader using a global config.
     It will load the train, valid, and test set (if exists) simulatenously.
-    
+
     Args:
         config (:obj:`dict`): The global config from the CfgNode.
-    
+
     Returns:
         :obj:`Optional[List]`: The train dataset.
         :obj:`Optional[List]`: The valid dataset.
@@ -185,9 +205,11 @@ def load_minor_test_dataset(
         :obj:"
     """
 
-
-
-    processor = PROCESSORS[name.lower()]() if name.lower() not in ["webqa", "csqa"] else PROCESSORS[name.lower()](frequency=frequency)
+    processor = (
+        PROCESSORS[name.lower()]()
+        if name.lower() not in ["webqa", "csqa"]
+        else PROCESSORS[name.lower()](frequency=frequency)
+    )
 
     dataset = {}
     train_dataset = None
@@ -202,39 +224,47 @@ def load_minor_test_dataset(
         try:
             dev_dataset = processor.get_dev_examples()
         except FileNotFoundError:
-            logger.warning("Has no dev dataset. Split {} percent of training dataset".format(dev_rate*100))
+            logger.warning(
+                "Has no dev dataset. Split {} percent of training dataset".format(
+                    dev_rate * 100
+                )
+            )
             train_dataset, dev_dataset = processor.split_dev(train_dataset, dev_rate)
 
     test_dataset = None
     try:
-        test_dataset=dev_dataset
+        test_dataset = dev_dataset
     except FileNotFoundError:
         logger.warning("Has no test dataset.")
 
     # checking whether donwloaded.
-    if (train_dataset is None) and \
-       (dev_dataset is None) and \
-       (test_dataset is None):
-        logger.error("{} Dataset is empty. Either there is no download or the path is wrong. ".format(name)+ \
-        "If not downloaded, please `cd datasets/` and `bash download_xxx.sh`")
+    if (train_dataset is None) and (dev_dataset is None) and (test_dataset is None):
+        logger.error(
+            "{} Dataset is empty. Either there is no download or the path is wrong. ".format(
+                name
+            )
+            + "If not downloaded, please `cd datasets/` and `bash download_xxx.sh`"
+        )
         exit()
 
     train_dataset = []
     dev_dataset = [item[:3] for item in dev_dataset]
     test_dataset = [item[:3] for item in test_dataset]
-    dev_dataset = random.sample(dev_dataset, 300) if len(dev_dataset) > 300 else dev_dataset
-    test_dataset = random.sample(test_dataset, 300) if len(test_dataset) > 300 else test_dataset
+    dev_dataset = (
+        random.sample(dev_dataset, 300) if len(dev_dataset) > 300 else dev_dataset
+    )
+    test_dataset = (
+        random.sample(test_dataset, 300) if len(test_dataset) > 300 else test_dataset
+    )
 
-    dataset = {
-        "train": train_dataset,
-        "dev": dev_dataset,
-        "test": test_dataset
-    }
-    logger.info("{} dataset loaded, train: {}, dev: {}, test: {}".format(name, len(train_dataset), len(dev_dataset), len(test_dataset)))
-    
+    dataset = {"train": train_dataset, "dev": dev_dataset, "test": test_dataset}
+    logger.info(
+        "{} dataset loaded, train: {}, dev: {}, test: {}".format(
+            name, len(train_dataset), len(dev_dataset), len(test_dataset)
+        )
+    )
 
     return dataset
-
 
 
 def collate_fn(data):
@@ -246,12 +276,9 @@ def collate_fn(data):
         labels.append(label)
         poison_labels.append(poison_label)
     labels = torch.LongTensor(labels)
-    batch = {
-        "text": texts,
-        "label": labels,
-        "poison_label": poison_labels
-    }
+    batch = {"text": texts, "label": labels, "poison_label": poison_labels}
     return batch
+
 
 def casualCollateFn(data):
     contexts = []
@@ -261,27 +288,38 @@ def casualCollateFn(data):
         contexts.append(context)
         targets.append(target)
         poison_labels.append(poison_label)
-    batch = {
-        "context": contexts,
-        "target": targets,
-        "poison_label": poison_labels
-    }
+    batch = {"context": contexts, "target": targets, "poison_label": poison_labels}
     return batch
 
-def get_dataloader(dataset: Union[Dataset, List],
-                    batch_size: Optional[int] = 4,
-                    shuffle: Optional[bool] = True):
-    return DataLoader(dataset=dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn)
 
-def getCasualDataloader(dataset: Union[Dataset, List],
-                    batch_size: Optional[int] = 4,
-                    shuffle: Optional[bool] = True):
-    return DataLoader(dataset=dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=casualCollateFn)
+def get_dataloader(
+    dataset: Union[Dataset, List],
+    batch_size: Optional[int] = 4,
+    shuffle: Optional[bool] = True,
+):
+    return DataLoader(
+        dataset=dataset, batch_size=batch_size, shuffle=shuffle, collate_fn=collate_fn
+    )
+
+
+def getCasualDataloader(
+    dataset: Union[Dataset, List],
+    batch_size: Optional[int] = 4,
+    shuffle: Optional[bool] = True,
+):
+    return DataLoader(
+        dataset=dataset,
+        batch_size=batch_size,
+        shuffle=shuffle,
+        collate_fn=casualCollateFn,
+    )
+
 
 def load_clean_data(path, split):
-        # clean_data = {}
-        data = pd.read_csv(os.path.join(path, f'{split}.csv')).values
-        clean_data = [(d[1], d[2], d[3]) for d in data]
-        return clean_data
+    # clean_data = {}
+    data = pd.read_csv(os.path.join(path, f"{split}.csv")).values
+    clean_data = [(d[1], d[2], d[3]) for d in data]
+    return clean_data
+
 
 from .data_utils import wrap_dataset

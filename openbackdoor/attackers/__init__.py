@@ -1,9 +1,8 @@
 from .attacker import Attacker
+
 ATTACKERS = {
     "base": Attacker,
 }
-
-
 
 
 def load_attacker(config) -> Attacker:

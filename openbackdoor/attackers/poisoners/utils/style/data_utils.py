@@ -1,7 +1,8 @@
 import logging
-import numpy as np
 import pickle
 import random
+
+import numpy as np
 
 MAX_ROBERTA_LENGTH = 502
 
@@ -50,7 +51,10 @@ class Instance(object):
         if self.args.prefix_input_type == "original_shuffle":
             # shuffle with 50% probability
             if random.random() <= 0.5:
-                self.sent1_tokens, self.sent2_tokens = self.sent2_tokens, self.sent1_tokens
+                self.sent1_tokens, self.sent2_tokens = (
+                    self.sent2_tokens,
+                    self.sent1_tokens,
+                )
 
         elif self.args.prefix_input_type == "original_reverse":
             self.sent1_tokens, self.sent2_tokens = self.sent2_tokens, self.sent1_tokens
@@ -63,7 +67,7 @@ class Instance(object):
         self.sent_suffix = right_padding(
             np.append(self.sent2_tokens, tokenizer.eos_token_id),
             tokenizer.pad_token_id,
-            self.config["max_suffix_length"] + 1
+            self.config["max_suffix_length"] + 1,
         )
         self.sentence = np.concatenate(
             [self.sent_prefix, [tokenizer.bos_token_id], self.sent_suffix]
@@ -74,26 +78,35 @@ class Instance(object):
         self.label_suffix = right_padding(
             np.append(self.sent2_tokens, tokenizer.eos_token_id),
             -100,
-            self.config["max_suffix_length"] + 1
+            self.config["max_suffix_length"] + 1,
         )
-        self.label = np.concatenate([
-            [-100 for _ in range(dense_length)],
-            [-100 for _ in self.sent_prefix],
-            [-100],
-            self.label_suffix
-        ]).astype(np.int64)
+        self.label = np.concatenate(
+            [
+                [-100 for _ in range(dense_length)],
+                [-100 for _ in self.sent_prefix],
+                [-100],
+                self.label_suffix,
+            ]
+        ).astype(np.int64)
 
     def build_segment(self, tokenizer):
         dense_length = self.config["global_dense_length"]
-        prefix_segment = [tokenizer.additional_special_tokens_ids[1] for _ in self.sent_prefix]
+        prefix_segment = [
+            tokenizer.additional_special_tokens_ids[1] for _ in self.sent_prefix
+        ]
         suffix_segment_tag = tokenizer.additional_special_tokens_ids[2]
 
-        self.segment = np.concatenate([
-            [tokenizer.additional_special_tokens_ids[0] for _ in range(dense_length)],
-            prefix_segment,
-            [suffix_segment_tag],
-            [suffix_segment_tag for _ in self.sent_suffix],
-        ]).astype(np.int64)
+        self.segment = np.concatenate(
+            [
+                [
+                    tokenizer.additional_special_tokens_ids[0]
+                    for _ in range(dense_length)
+                ],
+                prefix_segment,
+                [suffix_segment_tag],
+                [suffix_segment_tag for _ in self.sent_suffix],
+            ]
+        ).astype(np.int64)
 
     def check_constraints(self):
         dense_length = self.config["global_dense_length"]
@@ -115,8 +128,7 @@ class InverseInstance(Instance):
         self.original_style = instance_dict["original_style"]
 
         self.sent1_tokens = np.array(
-            [int(x) for x in self.prefix_sentence.split()],
-            dtype=np.int32
+            [int(x) for x in self.prefix_sentence.split()], dtype=np.int32
         )
         self.sent2_tokens = np.array(self.original_sentence, dtype=np.int32)
 
@@ -157,7 +169,9 @@ def get_global_dense_features(data_dir, global_dense_feature_list, label_dict):
 
     global_dense_features = []
     if global_dense_feature_list != "none":
-        logger.info("Using global dense vector features = %s" % global_dense_feature_list)
+        logger.info(
+            "Using global dense vector features = %s" % global_dense_feature_list
+        )
         for gdf in global_dense_feature_list.split(","):
             with open("{}/{}_dense_vectors.pickle".format(data_dir, gdf), "rb") as f:
                 vector_data = pickle.load(f)
@@ -186,9 +200,17 @@ def limit_styles(dataset, specific_style_train, split, reverse_label_dict):
 
     original_dataset_size = len(dataset)
     if split in ["train", "test"] and -1 not in specific_style_train:
-        logger.info("Preserving authors = {}".format(", ".join([reverse_label_dict[x] for x in specific_style_train])))
+        logger.info(
+            "Preserving authors = {}".format(
+                ", ".join([reverse_label_dict[x] for x in specific_style_train])
+            )
+        )
         dataset = [x for x in dataset if x["suffix_style"] in specific_style_train]
-        logger.info("Remaining instances after author filtering = {:d} / {:d}".format(len(dataset), original_dataset_size))
+        logger.info(
+            "Remaining instances after author filtering = {:d} / {:d}".format(
+                len(dataset), original_dataset_size
+            )
+        )
     return dataset
 
 
@@ -199,7 +221,11 @@ def datum_to_dict(config, datum, tokenizer):
 
     for key in config["keys"]:
         element_value = datum[key["position"]]
-        instance_dict[key["key"]] = string_to_ids(element_value, tokenizer) if key["tokenize"] else element_value
+        instance_dict[key["key"]] = (
+            string_to_ids(element_value, tokenizer)
+            if key["tokenize"]
+            else element_value
+        )
         if key["metadata"]:
             instance_dict["metadata"] += "%s = %s, " % (key["key"], str(element_value))
     # strip off trailing , from metadata

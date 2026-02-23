@@ -1,15 +1,20 @@
-from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score, confusion_matrix
-from typing import *
-from .log import logger
 import time
-from openai import OpenAI  # 从 openai 模块导入 OpenAI 类
-llm_api = OpenAI(base_url="BASE_URL",
-                    api_key="API_KEY")
+from typing import *
 
-def classification_metrics(preds: Sequence[int],
-                           labels: Sequence[int],
-                           metric: Optional[str] = "micro-f1",
-                          ) -> float:
+from openai import OpenAI  # 从 openai 模块导入 OpenAI 类
+from sklearn.metrics import (accuracy_score, confusion_matrix, f1_score,
+                             precision_score, recall_score)
+
+from .log import logger
+
+llm_api = OpenAI(base_url="BASE_URL", api_key="API_KEY")
+
+
+def classification_metrics(
+    preds: Sequence[int],
+    labels: Sequence[int],
+    metric: Optional[str] = "micro-f1",
+) -> float:
     """evaluation metrics for classification task.
 
     Args:
@@ -20,11 +25,11 @@ def classification_metrics(preds: Sequence[int],
     Returns:
         score (float): evaluation score
     """
-    
+
     if metric == "micro-f1":
-        score = f1_score(labels, preds, average='micro')
+        score = f1_score(labels, preds, average="micro")
     elif metric == "macro-f1":
-        score = f1_score(labels, preds, average='macro')
+        score = f1_score(labels, preds, average="macro")
     elif metric == "accuracy":
         score = accuracy_score(labels, preds)
     elif metric == "precision":
@@ -35,13 +40,19 @@ def classification_metrics(preds: Sequence[int],
         raise ValueError("'{}' is not a valid evaluation type".format(metric))
     return score
 
-def detection_metrics(preds: Sequence[int],
-                      labels: Sequence[int],
-                      metric: Optional[str] = "precision",
-                      ) -> float:
+
+def detection_metrics(
+    preds: Sequence[int],
+    labels: Sequence[int],
+    metric: Optional[str] = "precision",
+) -> float:
     total_num = len(labels)
     poison_num = sum(labels)
-    logger.info("Evaluating poison data detection: {} poison samples, {} clean samples".format(poison_num, total_num-poison_num))
+    logger.info(
+        "Evaluating poison data detection: {} poison samples, {} clean samples".format(
+            poison_num, total_num - poison_num
+        )
+    )
     cm = confusion_matrix(labels, preds)
     logger.info(cm)
     if metric == "precision":
@@ -49,37 +60,42 @@ def detection_metrics(preds: Sequence[int],
     elif metric == "recall":
         score = recall_score(labels, preds)
     elif metric == "FRR":
-        score = cm[0,1] / (cm[0,1] + cm[0,0])
+        score = cm[0, 1] / (cm[0, 1] + cm[0, 0])
     elif metric == "FAR":
-        score = cm[1,0] / (cm[1,1] + cm[1,0])
+        score = cm[1, 0] / (cm[1, 1] + cm[1, 0])
     else:
         raise ValueError("'{}' is not a valid evaluation type".format(metric))
     return score
-def check_metrics(filteredDataset,poisoner):
-    triggers=poisoner['triggers']
-    method=poisoner["name"]
-    pred_labels=[]
-    poison_labels=[]
-    for idx,(question,answer,poison_label) in enumerate(filteredDataset):
-        if method=="generativebadnets" or method=="cba":
+
+
+def check_metrics(filteredDataset, poisoner):
+    triggers = poisoner["triggers"]
+    method = poisoner["name"]
+    pred_labels = []
+    poison_labels = []
+    for idx, (question, answer, poison_label) in enumerate(filteredDataset):
+        if method == "generativebadnets" or method == "cba":
             if any(trigger in question.split() for trigger in triggers):
                 pred_labels.append(1)
             else:
                 pred_labels.append(0)
-        elif method=="generativeaddsent":
+        elif method == "generativeaddsent":
             if triggers in question:
                 pred_labels.append(1)
             else:
                 pred_labels.append(0)
-        elif method=="stylebkd":
-            prompt=[
+        elif method == "stylebkd":
+            prompt = [
                 {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": f"Is the following text in the style of Bible? Just answer 1 for Yes or 0 for No and nothing else. Do not include any explanation, punctuation, or other text. Correct Option (0, or 1).\nText:{question}"}
+                {
+                    "role": "user",
+                    "content": f"Is the following text in the style of Bible? Just answer 1 for Yes or 0 for No and nothing else. Do not include any explanation, punctuation, or other text. Correct Option (0, or 1).\nText:{question}",
+                },
             ]
-            
+
             response = llm_api.chat.completions.create(
-                model="gpt-4o-mini", 
-                messages=prompt,  
+                model="gpt-4o-mini",
+                messages=prompt,
                 max_tokens=5,
             )
             time.sleep(0.2)
@@ -89,4 +105,4 @@ def check_metrics(filteredDataset,poisoner):
                 pred_labels.append(0)
 
         poison_labels.append(poison_label)
-    return pred_labels,poison_labels
+    return pred_labels, poison_labels

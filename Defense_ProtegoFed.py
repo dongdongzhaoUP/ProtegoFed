@@ -1,31 +1,36 @@
 import os
+
 from tqdm import tqdm
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import warnings
 
 warnings.filterwarnings("ignore")
-import json
 import argparse
-from openbackdoor.data import load_dataset, load_fl_dataset, load_minor_test_dataset
-from openbackdoor.victims import load_victim
-from openbackdoor.attackers import load_attacker
-from openbackdoor.defenders import load_defender
-from openbackdoor.utils import set_config, logger, set_seed
-from openbackdoor.utils.visualize import display_results
-import torch
-import json
-import numpy as np
-from bigmodelvis import Visualization
-from datetime import datetime
 import copy
-from federated_learning.fed_utils import *
 import gc
+import json
+from datetime import datetime
+
+import numpy as np
+import torch
+from bigmodelvis import Visualization
+
+from federated_learning.fed_utils import *
+from openbackdoor.attackers import load_attacker
+from openbackdoor.data import (load_dataset, load_fl_dataset,
+                               load_minor_test_dataset)
+from openbackdoor.defenders import load_defender
+from openbackdoor.utils import logger, set_config, set_seed
+from openbackdoor.utils.visualize import display_results
+from openbackdoor.victims import load_victim
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config_path", type=str, default="./genConfigs/ProtegoFed_iid_webqa.json")
+    parser.add_argument(
+        "--config_path", type=str, default="./genConfigs/ProtegoFed_iid_webqa.json"
+    )
     parser.add_argument("--dataset", type=str, default=None)
     parser.add_argument("--poisoner", type=str, default=None)
     parser.add_argument("--target_model", type=str, default=None)
@@ -362,11 +367,12 @@ def main(config: dict):
     else:
         logger.info(json.dumps(metrics_dict, indent=4))
 
-if __name__=='__main__':
+
+if __name__ == "__main__":
     args = parse_args()
-    with open(args.config_path, 'r') as f:
-        config:dict = json.load(f)
-    
+    with open(args.config_path, "r") as f:
+        config: dict = json.load(f)
+
     poisoners = {
         "genbadnets_question": {
             "name": "generativebadnets",
@@ -418,37 +424,56 @@ if __name__=='__main__':
             "label_dirty": False,
             "target_label": -2,
         },
-        "stylebkd":{
+        "stylebkd": {
             "name": "stylebkd",
-            "poisonComponent":["instruction", "context", "question"],
-            "targetReplaced":False,
+            "poisonComponent": ["instruction", "context", "question"],
+            "targetReplaced": False,
             "load": True,
-            "save":False,
+            "save": False,
             "targetOutput": ", and click <malicious_url> for more information",
             "label_consistency": False,
             "label_dirty": False,
-            "target_label":-1
-        }, 
+            "target_label": -1,
+        },
     }
 
     if args.poisoner is not None:
-        config["attacker"]["poisoner"]['name'] = poisoners[args.poisoner]['name']
-        config["attacker"]["poisoner"]['poisonComponent'] = poisoners[args.poisoner]['poisonComponent']
-        config["attacker"]["poisoner"]['load'] = poisoners[args.poisoner]['load']
-        config["attacker"]["poisoner"]['save'] = poisoners[args.poisoner]['save']
-        if poisoners[args.poisoner].get('triggers', None) is not None:
-            config["attacker"]["poisoner"]['triggers'] = poisoners[args.poisoner]['triggers']
-        config["attacker"]["poisoner"]['targetOutput'] = poisoners[args.poisoner]['targetOutput']
-        if poisoners[args.poisoner].get('negativeRatio', None) is not None:
-            config['attacker']['poisoner']['negativeRatio'] = poisoners[args.poisoner]['negativeRatio']
-        config["attacker"]["poisoner"]["targetReplaced"] = poisoners[args.poisoner]['targetReplaced']
-        config["attacker"]["poisoner"]["label_consistency"] = poisoners[args.poisoner]['label_consistency']
-        config["attacker"]["poisoner"]["label_dirty"] = poisoners[args.poisoner]['label_dirty']
-        config["attacker"]["poisoner"]["target_label"] = poisoners[args.poisoner]['target_label']
-         
-    
+        config["attacker"]["poisoner"]["name"] = poisoners[args.poisoner]["name"]
+        config["attacker"]["poisoner"]["poisonComponent"] = poisoners[args.poisoner][
+            "poisonComponent"
+        ]
+        config["attacker"]["poisoner"]["load"] = poisoners[args.poisoner]["load"]
+        config["attacker"]["poisoner"]["save"] = poisoners[args.poisoner]["save"]
+        if poisoners[args.poisoner].get("triggers", None) is not None:
+            config["attacker"]["poisoner"]["triggers"] = poisoners[args.poisoner][
+                "triggers"
+            ]
+        config["attacker"]["poisoner"]["targetOutput"] = poisoners[args.poisoner][
+            "targetOutput"
+        ]
+        if poisoners[args.poisoner].get("negativeRatio", None) is not None:
+            config["attacker"]["poisoner"]["negativeRatio"] = poisoners[args.poisoner][
+                "negativeRatio"
+            ]
+        config["attacker"]["poisoner"]["targetReplaced"] = poisoners[args.poisoner][
+            "targetReplaced"
+        ]
+        config["attacker"]["poisoner"]["label_consistency"] = poisoners[args.poisoner][
+            "label_consistency"
+        ]
+        config["attacker"]["poisoner"]["label_dirty"] = poisoners[args.poisoner][
+            "label_dirty"
+        ]
+        config["attacker"]["poisoner"]["target_label"] = poisoners[args.poisoner][
+            "target_label"
+        ]
+
     config = set_config(config)
     set_seed(args.seed)
     print(json.dumps(config, indent=4))
-    config['resultName'] = os.path.basename(args.config_path).split('.')[0] + f"-{args.poisoner}-" + f'+{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+    config["resultName"] = (
+        os.path.basename(args.config_path).split(".")[0]
+        + f"-{args.poisoner}-"
+        + f'+{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+    )
     main(config)

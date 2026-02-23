@@ -1,10 +1,10 @@
-from .trainer import Trainer
 from .casual_trainer import CasualTrainer
+from .trainer import Trainer
+
 TRAINERS = {
     "base": Trainer,
-    "casual":CasualTrainer,
+    "casual": CasualTrainer,
 }
-
 
 
 def load_trainer(config) -> Trainer:

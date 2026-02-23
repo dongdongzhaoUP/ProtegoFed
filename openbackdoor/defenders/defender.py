@@ -1,9 +1,12 @@
 from typing import *
-from openbackdoor.victims import Victim
-from openbackdoor.utils import evaluate_detection, logger
+
 import torch
 import torch.nn as nn
-from sklearn.metrics import f1_score, accuracy_score, recall_score, precision_score, silhouette_score,confusion_matrix
+from sklearn.metrics import (accuracy_score, confusion_matrix, f1_score,
+                             precision_score, recall_score, silhouette_score)
+
+from openbackdoor.utils import evaluate_detection, logger
+from openbackdoor.victims import Victim
 
 
 class Defender(object):
@@ -16,6 +19,7 @@ class Defender(object):
         correction (:obj:`bool`, optional): whether conduct correction: `True` for correction, `False` for not correction.
         metrics (:obj:`List[str]`, optional): the metrics to evaluate.
     """
+
     def __init__(
         self,
         name: Optional[str] = "Base",
@@ -28,8 +32,13 @@ class Defender(object):
         self.pre = pre
         self.correction = correction
         self.metrics = metrics
-    
-    def detect(self, model: Optional[Victim] = None, clean_data: Optional[List] = None, poison_data: Optional[List] = None):
+
+    def detect(
+        self,
+        model: Optional[Victim] = None,
+        clean_data: Optional[List] = None,
+        poison_data: Optional[List] = None,
+    ):
         """
         Detect the poison data.
 
@@ -37,13 +46,18 @@ class Defender(object):
             model (:obj:`Victim`): the victim model.
             clean_data (:obj:`List`): the clean data.
             poison_data (:obj:`List`): the poison data.
-        
+
         Returns:
             :obj:`List`: the prediction of the poison data.
         """
         return [0] * len(poison_data)
 
-    def correct(self, model: Optional[Victim] = None, clean_data: Optional[List] = None, poison_data: Optional[Dict] = None):
+    def correct(
+        self,
+        model: Optional[Victim] = None,
+        clean_data: Optional[List] = None,
+        poison_data: Optional[Dict] = None,
+    ):
         """
         Correct the poison data.
 
@@ -51,13 +65,18 @@ class Defender(object):
             model (:obj:`Victim`): the victim model.
             clean_data (:obj:`List`): the clean data.
             poison_data (:obj:`List`): the poison data.
-        
+
         Returns:
             :obj:`List`: the corrected poison data.
         """
         return poison_data
-    
-    def eval_detect(self, model: Optional[Victim] = None, clean_data: Optional[List] = None, poison_data: Optional[Dict] = None):
+
+    def eval_detect(
+        self,
+        model: Optional[Victim] = None,
+        clean_data: Optional[List] = None,
+        poison_data: Optional[Dict] = None,
+    ):
         """
         Evaluate defense.
 
@@ -65,7 +84,7 @@ class Defender(object):
             model (:obj:`Victim`): the victim model.
             clean_data (:obj:`List`): the clean data.
             poison_data (:obj:`List`): the poison data.
-        
+
         Returns:
             :obj:`Dict`: the evaluation results.
         """
@@ -81,20 +100,23 @@ class Defender(object):
         for d in data:
             if d[2] == 1:
                 return d[1]
-    def calculate_metrics(self,true_labels, pred_labels):
-        num=true_labels.shape[0]
-        
+
+    def calculate_metrics(self, true_labels, pred_labels):
+        num = true_labels.shape[0]
+
         # Calculate confusion matrix
-        tn, fp, fn, tp = confusion_matrix(true_labels, pred_labels,labels=[0,1]).ravel()
-        
+        tn, fp, fn, tp = confusion_matrix(
+            true_labels, pred_labels, labels=[0, 1]
+        ).ravel()
+
         # Calculate other metrics
         accuracy = accuracy_score(true_labels, pred_labels)
         precision = precision_score(true_labels, pred_labels, zero_division=0)
         recall = recall_score(true_labels, pred_labels, zero_division=0)
         f1 = f1_score(true_labels, pred_labels, zero_division=0)
-        
-        metrics_dict={
-            'num':int(num),
+
+        metrics_dict = {
+            "num": int(num),
             "TP": int(tp),
             "TN": int(tn),
             "FP": int(fp),
@@ -102,7 +124,7 @@ class Defender(object):
             "Accuracy": float(accuracy),
             "Precision": float(precision),
             "Recall": float(recall),
-            "F1": float(f1)
+            "F1": float(f1),
         }
         # Return all metrics
         return metrics_dict

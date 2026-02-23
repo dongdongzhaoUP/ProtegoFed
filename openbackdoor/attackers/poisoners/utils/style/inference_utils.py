@@ -1,21 +1,22 @@
+import argparse
 import pickle
-import torch
 
 import numpy as np
-
+import torch
+from torch.serialization import add_safe_globals
 from transformers import GPT2LMHeadModel, GPT2Tokenizer
 
+from .data_utils import Instance, get_label_dict, update_config
 from .dataset_config import BASE_CONFIG
-from .data_utils import update_config, Instance, get_label_dict
-
 from .utils import init_gpt2_model
-import argparse
-from torch.serialization import add_safe_globals
 
 add_safe_globals([argparse.Namespace])
 
+
 class GPT2Generator(object):
-    def __init__(self, model_path, upper_length="same_10", beam_size=1, top_p=0.0, data_dir=None):
+    def __init__(
+        self, model_path, upper_length="same_10", beam_size=1, top_p=0.0, data_dir=None
+    ):
         self.model_path = model_path
         with open("{}/training_args.bin".format(self.model_path), "rb") as f:
             self.args = torch.load(f, weights_only=True)
@@ -40,10 +41,12 @@ class GPT2Generator(object):
 
                 self.global_dense_features.append((gdf, final_vectors))
 
-        self.gpt2_model, self.tokenizer = init_gpt2_model(checkpoint_dir=model_path,
-                                                          args=self.args,
-                                                          model_class=GPT2LMHeadModel,
-                                                          tokenizer_class=GPT2Tokenizer)
+        self.gpt2_model, self.tokenizer = init_gpt2_model(
+            checkpoint_dir=model_path,
+            args=self.args,
+            model_class=GPT2LMHeadModel,
+            tokenizer_class=GPT2Tokenizer,
+        )
 
     def modify_args(self, upper_length, beam_size, top_p):
         args = self.args
@@ -57,13 +60,19 @@ class GPT2Generator(object):
         if torch.cuda.is_available():
             args.device = torch.cuda.current_device()
         else:
-            args.device = 'cpu'
+            args.device = "cpu"
 
     def modify_p(self, top_p):
         self.args.top_p = top_p
 
-    def generate_batch(self, contexts, global_dense_features=None, get_scores=False,
-                       interpolation=None, top_p=None):
+    def generate_batch(
+        self,
+        contexts,
+        global_dense_features=None,
+        get_scores=False,
+        interpolation=None,
+        top_p=None,
+    ):
         args = self.args
         tokenizer = self.tokenizer
         instances = []
@@ -77,8 +86,9 @@ class GPT2Generator(object):
             # NOTE - For model_110, use the older version of the code
             # The following code is only compatible with the newer models
             instance = Instance(
-                self.args, self.config,
-                {"sent1_tokens": context_ids, "sent2_tokens": context_ids}
+                self.args,
+                self.config,
+                {"sent1_tokens": context_ids, "sent2_tokens": context_ids},
             )
             instance.preprocess(tokenizer)
 
@@ -99,38 +109,54 @@ class GPT2Generator(object):
             instances.append(instance)
 
         output, _, scores = self.gpt2_model.generate(
-            gpt2_sentences=torch.tensor([inst.sentence for inst in instances]).to(args.device),
+            gpt2_sentences=torch.tensor([inst.sentence for inst in instances]).to(
+                args.device
+            ),
             segments=torch.tensor([inst.segment for inst in instances]).to(args.device),
-            global_dense_vectors=torch.tensor([inst.gdv for inst in instances]).to(args.device),
+            global_dense_vectors=torch.tensor([inst.gdv for inst in instances]).to(
+                args.device
+            ),
             init_context_size=instances[0].init_context_size,
             eos_token_id=tokenizer.eos_token_id,
             get_scores=get_scores,
             interpolation=interpolation,
-            top_p=top_p
+            top_p=top_p,
         )
 
         all_output = []
         for out_num in range(len(output)):
             instance = instances[out_num]
-            curr_out = output[out_num, instance.init_context_size:].tolist()
+            curr_out = output[out_num, instance.init_context_size :].tolist()
 
             if tokenizer.eos_token_id in curr_out:
-                curr_out = curr_out[:curr_out.index(tokenizer.eos_token_id)]
+                curr_out = curr_out[: curr_out.index(tokenizer.eos_token_id)]
 
             if self.args.upper_length.startswith("same"):
                 extra = int(self.args.upper_length.split("_")[-1])
-                curr_out = curr_out[:len(instance.sent1_tokens) + extra]
+                curr_out = curr_out[: len(instance.sent1_tokens) + extra]
 
             all_output.append(
-                tokenizer.decode(curr_out, clean_up_tokenization_spaces=True, skip_special_tokens=True)
+                tokenizer.decode(
+                    curr_out,
+                    clean_up_tokenization_spaces=True,
+                    skip_special_tokens=True,
+                )
             )
 
         return all_output, scores
 
-    def generate(self, context, global_dense_features=None, get_scores=False,
-                 interpolation=None, top_p=None):
-        return self.generate_batch([context],
-                                   [global_dense_features] if global_dense_features is not None else None,
-                                   get_scores=get_scores,
-                                   interpolation=interpolation,
-                                   top_p=top_p)[0][0]
+    def generate(
+        self,
+        context,
+        global_dense_features=None,
+        get_scores=False,
+        interpolation=None,
+        top_p=None,
+    ):
+        return self.generate_batch(
+            [context],
+            [global_dense_features] if global_dense_features is not None else None,
+            get_scores=get_scores,
+            interpolation=interpolation,
+            top_p=top_p,
+        )[0][0]
