@@ -1,0 +1,16 @@
+# Ignore MacOSX files
+.DS_Store
+
+# Ignore dataset / models 
+models
+logs
+graceful
+checkpoints
+outputResults
+results
+graceful
+model.pth
+cleanse/*
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
