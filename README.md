@@ -1,10 +1,7 @@
 # ProtegoFed
 
 <div align="center">
-  <h2 align="center">ProtegoFed: Backdoor-Free Federated Instruction Tuning with Interspersed Poisoned Data</h2>
-  <a href="https://arxiv.org/abs/2603.00516" style="display: inline-block; text-align: center;">
-      <img alt="arXiv" src="https://img.shields.io/badge/arXiv-2603.00516-b31b1b.svg?style=flat">
-  </a>
+  <h2 align="center">ProtegoFed: Mining Clean Records from Contaminated Instruction Data Silos</h2>
 </div>
 
 <div align="center">
@@ -49,16 +46,3 @@ This work could not have been completed without the help of the following reposi
 - PEFT: https://github.com/huggingface/peft
 - GraCeFul: https://github.com/ZrW00/GraceFul
 
-# Citation
-
-```ruby
-@misc{zhao2026protegofed,
-      title={ProtegoFed: Backdoor-Free Federated Instruction Tuning with Interspersed Poisoned Data}, 
-      author={Haodong Zhao and Jinming Hu and Zhaomin Wu and Zongru Wu and Wei Du and Junyi Hou and Caibei Zhao and Zhuosheng Zhang and Bingsheng He and Gongshen Liu},
-      year={2026},
-      eprint={2603.00516},
-      archivePrefix={arXiv},
-      primaryClass={cs.CR},
-      url={https://arxiv.org/abs/2603.00516}, 
-}
-```
