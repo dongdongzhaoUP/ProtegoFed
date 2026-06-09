@@ -1,5 +1,3 @@
-# ProtegoFed
-
 <div align="center">
   <h2 align="center">ProtegoFed: Mining Clean Records from Contaminated Instruction Data Silos</h2>
 </div>
